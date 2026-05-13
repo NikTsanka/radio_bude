@@ -64,19 +64,46 @@ class _AlbumArt extends StatelessWidget {
       borderRadius: BorderRadius.circular(24),
       child: AspectRatio(
         aspectRatio: 1,
-        child: CachedNetworkImage(
-          imageUrl: Constants.radioBudeArtUrl,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
-            color: Colors.grey[900],
-            child: const Center(child: CircularProgressIndicator()),
-          ),
-          errorWidget: (_, __, ___) => Container(
-            color: Colors.grey[900],
-            child: const Icon(Icons.radio, size: 100),
-          ),
+        child: StreamBuilder<MediaItem?>(
+          stream: audioHandler.mediaItem,
+          builder: (context, snapshot) {
+            final artUri = snapshot.data?.artUri;
+
+            if (artUri == null) {
+              return _buildPlaceholder(context);
+            }
+
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: CachedNetworkImage(
+                key: ValueKey(
+                  artUri.toString(),
+                ), // ✓ AnimatedSwitcher-ი ცარიერდება ცვლის
+                imageUrl: artUri.toString(),
+                fit: BoxFit.cover,
+                placeholder: (_, __) => _buildPlaceholder(context),
+                errorWidget: (_, __, ___) => _buildPlaceholder(context),
+              ),
+            );
+          },
         ),
       ),
+    );
+  }
+
+  Widget _buildPlaceholder(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.tertiary,
+          ],
+        ),
+      ),
+      child: const Icon(Icons.radio, size: 120, color: Colors.white),
     );
   }
 }

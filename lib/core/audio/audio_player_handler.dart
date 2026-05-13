@@ -2,36 +2,38 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import '../constants.dart';
+import '../services/cover_art_service.dart';
 
 /// Radio Bude-ის audio handler.
-/// AudioService-ი მართავს background playback-ს,
+/// AudioService-ი ფარდამიჩუმოდ უმართავს background playback-ს,
 /// lock screen controls-ს, notification-ს, Bluetooth ღილაკებს.
 class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
+  final CoverArtService _coverService = CoverArtService();
 
   /// ICY metadata-დან მოპოვებული მიმდინარე სიმღერა
-  /// (UI-ში StreamBuilder-ით უსმენთ)
   final BehaviorSubject<String?> currentSong = BehaviorSubject<String?>.seeded(
     null,
   );
+
+  /// Default Radio Bude cover (fallback როცა Deezer ვერ ნახა)
+  static const String _defaultCover =
+      'https://niktsanka.github.io/img/cover.png';
 
   AudioPlayerHandler() {
     _init();
   }
 
   Future<void> _init() async {
-    // ✓ Player-ის state ცვლილებები გადასცეთ AudioService-ს
-    // (ეს უზრუნველყოფს, რომ lock screen-ის ღილაკები სწორ state-ში იყოს)
     _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
 
-    // ✓ ICY metadata stream — ეთერში სიმღერის სახელის წამოღება
-    // Icecast-ი ყოველ რამდენიმე წამში გვაგზავნის "StreamTitle"-ს
-    _player.icyMetadataStream.listen((icy) {
+    // ✓ ICY metadata listener — ეთერში სიმღერის ცვლა + cover fetch
+    _player.icyMetadataStream.listen((icy) async {
       final title = icy?.info?.title;
       if (title != null && title.isNotEmpty) {
         currentSong.add(title);
 
-        // ✓ Lock screen / notification-ში სიმღერის სახელის განახლება
+        // ✓ მყისიერად UI განვაახლოთ ცარიერი სიმღერით (cover ჯერ default)
         final current = mediaItem.value;
         if (current != null) {
           mediaItem.add(
@@ -41,10 +43,12 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
             ),
           );
         }
+
+        // ✓ Deezer-დან cover-ის ცარიერდება ფონზე — UI არ ცარიერდება
+        _updateCoverArt(title);
       }
     });
 
-    // ✓ შეცდომების handling — თუ stream-ი დაიკარგა
     _player.playbackEventStream.listen(
       (event) {},
       onError: (Object e, StackTrace stackTrace) {
@@ -52,8 +56,21 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       },
     );
 
-    // ✓ Radio Bude-ის default ჩატვირთვა (აპლიკაცია გაშვებისთანავე ბრუნდება)
     await _loadRadioBude();
+  }
+
+  /// Deezer-დან cover-ის წამოღება და MediaItem-ის ცარიერი
+  Future<void> _updateCoverArt(String streamTitle) async {
+    final coverUrl = await _coverService.fetchCoverFor(streamTitle);
+
+    // ✓ მნიშვნელოვანი: ცარიერდება მაშინაც კი როცა cover null-ია — default-ით
+    final finalCoverUrl = coverUrl ?? _defaultCover;
+
+    final current = mediaItem.value;
+    if (current != null && current.title == streamTitle) {
+      // ✓ მხოლოდ თუ ჯერ კიდევ იგივე სიმღერა იკრავება (ცარიერი race condition)
+      mediaItem.add(current.copyWith(artUri: Uri.parse(finalCoverUrl)));
+    }
   }
 
   Future<void> _loadRadioBude() async {
@@ -62,7 +79,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       album: Constants.radioBudeName,
       title: 'მზადდება...',
       artist: Constants.radioBudeAuthor,
-      artUri: Uri.parse(Constants.radioBudeArtUrl),
+      artUri: Uri.parse(_defaultCover),
     );
 
     mediaItem.add(item);
@@ -100,13 +117,12 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  /// Radio Bude-ზე დაბრუნება
   Future<void> playRadioBude() async {
     await _loadRadioBude();
     await _player.play();
   }
 
-  // === Audio Service-ის required overrides ===
+  // === Audio Service overrides ===
 
   @override
   Future<void> play() => _player.play();
@@ -123,7 +139,6 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
-  /// Player state-ის გადათარგმნა AudioService format-ში
   PlaybackState _transformEvent(PlaybackEvent event) {
     return PlaybackState(
       controls: [MediaControl.pause, MediaControl.play, MediaControl.stop],
