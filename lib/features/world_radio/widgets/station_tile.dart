@@ -58,8 +58,8 @@ class StationTile extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: station.favicon,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => _buildFallbackIcon(theme),
-                errorWidget: (_, __, ___) => _buildFallbackIcon(theme),
+                placeholder: (_, _) => _buildFallbackIcon(theme),
+                errorWidget: (_, _, _) => _buildFallbackIcon(theme),
               )
             : _buildFallbackIcon(theme),
       ),
