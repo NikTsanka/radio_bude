@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../main.dart';
 import 'radio_browser_service.dart';
 import 'station_model.dart';
+import 'widgets/country_picker_sheet.dart';
 import 'widgets/station_tile.dart';
 
 class WorldRadioScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
   List<Station> _stations = [];
   List<TagInfo> _topTags = [];
+  List<CountryInfo> _countries = [];
 
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -28,6 +30,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
   String _searchQuery = '';
   String? _selectedTag;
+  CountryInfo? _selectedCountry;
   Timer? _searchDebounce;
 
   static const int _pageSize = 30;
@@ -54,10 +57,16 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     });
 
     try {
-      // ცარიერი ცარიერდება — top stations + top tags
       final results = await Future.wait([
         _fetchStations(offset: 0),
-        _service.getTopTags(limit: 20),
+        if (_topTags.isEmpty)
+          _service.getTopTags(limit: 20)
+        else
+          Future.value(_topTags),
+        if (_countries.isEmpty)
+          _service.getCountries()
+        else
+          Future.value(_countries),
       ]);
 
       if (!mounted) return;
@@ -65,6 +74,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
       setState(() {
         _stations = results[0] as List<Station>;
         _topTags = results[1] as List<TagInfo>;
+        _countries = results[2] as List<CountryInfo>;
         _isLoading = false;
         _hasMore = _stations.length >= _pageSize;
       });
@@ -79,14 +89,19 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   }
 
   Future<List<Station>> _fetchStations({required int offset}) async {
-    if (_searchQuery.isNotEmpty || _selectedTag != null) {
+    // თუ რომელიმე ფილტრი/ძებნა აქტიურია — search ვცადოთ
+    if (_searchQuery.isNotEmpty ||
+        _selectedTag != null ||
+        _selectedCountry != null) {
       return _service.searchStations(
         name: _searchQuery.isNotEmpty ? _searchQuery : null,
         tag: _selectedTag,
+        countryCode: _selectedCountry?.code,
         limit: _pageSize,
         offset: offset,
       );
     }
+    // სხვა შემთხვევაში — top stations
     return _service.getTopStations(limit: _pageSize, offset: offset);
   }
 
@@ -131,18 +146,63 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   }
 
   void _onTagSelected(String? tag) {
+    setState(() => _selectedTag = tag);
+    _loadInitial();
+  }
+
+  Future<void> _openCountryPicker() async {
+    if (_countries.isEmpty) {
+      // თუ ქვეყნები ჯერ არ ჩაგვიტვირთვია
+      try {
+        final countries = await _service.getCountries();
+        if (!mounted) return;
+        setState(() => _countries = countries);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ქვეყნების ჩატვირთვა ვერ მოხერხდა')),
+        );
+        return;
+      }
+    }
+
+    final result = await showModalBottomSheet<CountryInfo?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CountryPickerSheet(
+        countries: _countries,
+        selectedCountry: _selectedCountry,
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (result == null) return; // user dismissed without selecting
+
+    if (isClearSelection(result)) {
+      // "გასუფთავება" ღილაკი დაიჭირა
+      setState(() => _selectedCountry = null);
+    } else {
+      setState(() => _selectedCountry = result);
+    }
+
+    _loadInitial();
+  }
+
+  void _clearAllFilters() {
+    _searchController.clear();
     setState(() {
-      _selectedTag = tag;
-      // ცარიერი ცარიერდება — ცარიერი ცარიერდება ცარიერი
+      _searchQuery = '';
+      _selectedTag = null;
+      _selectedCountry = null;
     });
     _loadInitial();
   }
 
   Future<void> _onStationTap(Station station) async {
-    // Register click (statistics) — fire-and-forget
     _service.registerClick(station.stationUuid);
 
-    // ცარიერი ცარიერდება
     await audioHandler.playStation(
       url: station.url,
       name: station.name,
@@ -150,12 +210,26 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
       favicon: station.favicon,
     );
 
-    // ცარიერი feedback
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('🎵 ${station.name}'),
           duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  /// Radio Bude-ზე დაბრუნება
+  Future<void> _backToRadioBude() async {
+    await audioHandler.playRadioBude();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🎙️ Radio Bude'),
+          duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -170,7 +244,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           children: [
             _buildHeader(),
             _buildSearchBar(),
-            _buildTagFilters(),
+            _buildFilterChips(),
             const Divider(height: 1),
             Expanded(child: _buildBody()),
           ],
@@ -181,21 +255,40 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
       child: Row(
         children: [
-          Text(
-            'მსოფლიო რადიოები',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          if (_stations.isNotEmpty)
-            Text(
-              '${_stations.length}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+          Expanded(
+            child: Text(
+              'მსოფლიო რადიოები',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
+          ),
+          // Radio Bude-ზე დაბრუნების ღილაკი — მხოლოდ მაშინ ჩანს, როცა სხვა სადგური უკრავს
+          StreamBuilder<MediaItem?>(
+            stream: audioHandler.mediaItem,
+            builder: (context, snapshot) {
+              final isPlayingRadioBude = snapshot.data?.album == 'Radio Bude';
+
+              if (isPlayingRadioBude) {
+                return Text(
+                  '${_stations.length}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                );
+              }
+
+              return IconButton(
+                onPressed: _backToRadioBude,
+                icon: const Icon(Icons.home),
+                tooltip: 'Radio Bude-ზე დაბრუნება',
+                color: Theme.of(context).colorScheme.primary,
+              );
+            },
+          ),
         ],
       ),
     );
@@ -203,38 +296,75 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _onSearchChanged,
-        decoration: InputDecoration(
-          hintText: 'მოძებნე სადგური...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    _onSearchChanged('');
-                  },
-                )
-              : null,
-          filled: true,
-          fillColor: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(28),
-            borderSide: BorderSide.none,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'მოძებნე სადგური...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          const SizedBox(width: 8),
+          // ქვეყნის ფილტრის ღილაკი
+          _buildCountryButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCountryButton() {
+    final isSelected = _selectedCountry != null;
+
+    return Material(
+      color: isSelected
+          ? Theme.of(context).colorScheme.primary
+          : Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _openCountryPicker,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Icon(
+            Icons.public,
+            color: isSelected ? Theme.of(context).colorScheme.onPrimary : null,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTagFilters() {
-    if (_topTags.isEmpty) return const SizedBox(height: 8);
+  Widget _buildFilterChips() {
+    final hasActiveFilters =
+        _selectedTag != null ||
+        _selectedCountry != null ||
+        _searchQuery.isNotEmpty;
 
     return SizedBox(
       height: 48,
@@ -242,6 +372,21 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
+          // არჩეული ქვეყანა — ვიზუალური chip
+          if (_selectedCountry != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: InputChip(
+                avatar: const Icon(Icons.location_on, size: 18),
+                label: Text(_selectedCountry!.name),
+                onDeleted: () {
+                  setState(() => _selectedCountry = null);
+                  _loadInitial();
+                },
+              ),
+            ),
+
+          // "ყველა" / Tag chips
           _buildFilterChip(
             label: 'ყველა',
             isSelected: _selectedTag == null,
@@ -254,6 +399,17 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
               onTap: () => _onTagSelected(tag.name),
             ),
           ),
+
+          // "გასუფთავება" — თუ რამე ფილტრი აქტიურია
+          if (hasActiveFilters)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: ActionChip(
+                avatar: const Icon(Icons.clear, size: 18),
+                label: const Text('გასუფთავება'),
+                onPressed: _clearAllFilters,
+              ),
+            ),
         ],
       ),
     );
@@ -317,8 +473,14 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'ცარიერი ცარიერდება',
+            'სადგური ვერ მოიძებნა',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _clearAllFilters,
+            icon: const Icon(Icons.clear_all),
+            label: const Text('ფილტრების გასუფთავება'),
           ),
         ],
       ),

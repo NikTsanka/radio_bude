@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../favorites/favorites_service.dart';
 import '../station_model.dart';
 
 class StationTile extends StatelessWidget {
@@ -7,11 +8,15 @@ class StationTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool isPlaying;
 
+  /// თუ true — heart icon ცარიერდება არ ცარიერდება (Favorites tab-ში გვაქვს უკვე heart-ი)
+  final bool hideFavoriteButton;
+
   const StationTile({
     super.key,
     required this.station,
     required this.onTap,
     this.isPlaying = false,
+    this.hideFavoriteButton = false,
   });
 
   @override
@@ -40,6 +45,7 @@ class StationTile extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(child: _buildInfo(theme)),
               const SizedBox(width: 8),
+              if (!hideFavoriteButton) _buildFavoriteButton(),
               _buildTrailing(theme),
             ],
           ),
@@ -58,8 +64,8 @@ class StationTile extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: station.favicon,
                 fit: BoxFit.cover,
-                placeholder: (_, _) => _buildFallbackIcon(theme),
-                errorWidget: (_, _, _) => _buildFallbackIcon(theme),
+                placeholder: (_, __) => _buildFallbackIcon(theme),
+                errorWidget: (_, __, ___) => _buildFallbackIcon(theme),
               )
             : _buildFallbackIcon(theme),
       ),
@@ -111,15 +117,55 @@ class StationTile extends StatelessWidget {
     );
   }
 
+  Widget _buildFavoriteButton() {
+    return AnimatedBuilder(
+      animation: FavoritesService(),
+      builder: (context, _) {
+        final isFav = FavoritesService().isFavorite(station.stationUuid);
+
+        return IconButton(
+          onPressed: () async {
+            final added = await FavoritesService().toggleFavorite(station);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    added ? '💖 დაემატა ფავორიტებში' : 'წაიშალა ფავორიტებიდან',
+                  ),
+                  duration: const Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          icon: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, animation) =>
+                ScaleTransition(scale: animation, child: child),
+            child: Icon(
+              isFav ? Icons.favorite : Icons.favorite_outline,
+              key: ValueKey(isFav),
+              color: isFav
+                  ? Colors.pink[300]
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildTrailing(ThemeData theme) {
     if (isPlaying) {
-      return Icon(Icons.graphic_eq, color: theme.colorScheme.primary, size: 24);
+      return Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: Icon(
+          Icons.graphic_eq,
+          color: theme.colorScheme.primary,
+          size: 24,
+        ),
+      );
     }
-
-    return Icon(
-      Icons.play_circle_outline,
-      color: theme.colorScheme.onSurface.withOpacity(0.4),
-      size: 28,
-    );
+    return const SizedBox.shrink();
   }
 }

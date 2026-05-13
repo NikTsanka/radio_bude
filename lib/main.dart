@@ -2,8 +2,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/audio/audio_player_handler.dart';
+import 'features/favorites/favorites_service.dart'; // ✓ ახალი import
 
-/// Global audio handler — აქედან წვდომა აქვს ნებისმიერ widget-ს
 late AudioPlayerHandler audioHandler;
 
 Future<void> main() async {
@@ -20,6 +20,9 @@ Future<void> main() async {
       androidNotificationIcon: 'mipmap/ic_launcher',
     ),
   );
+
+  // ✓ ფავორიტების ჩატვირთვა
+  await FavoritesService().load();
 
   runApp(const RadioBudeApp());
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../my_radio/my_radio_screen.dart';
 import '../world_radio/world_radio_screen.dart';
+import '../favorites/favorites_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const List<Widget> _screens = [
     MyRadioScreen(),
     WorldRadioScreen(),
-    _PlaceholderScreen(title: 'ფავორიტები', subtitle: 'Phase 5-ში'),
+    FavoritesScreen(),
   ];
 
   @override
