@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../my_radio/my_radio_screen.dart';
+import '../world_radio/world_radio_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ეს ცარიელი screens მერე ჩაანაცვლდება რეალური implementations-ით
   static const List<Widget> _screens = [
     MyRadioScreen(),
-    _PlaceholderScreen(title: 'მსოფლიო რადიოები', subtitle: 'Phase 4-ში'),
+    WorldRadioScreen(),
     _PlaceholderScreen(title: 'ფავორიტები', subtitle: 'Phase 5-ში'),
   ];
 
