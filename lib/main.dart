@@ -16,7 +16,7 @@ Future<void> main() async {
       androidNotificationChannelName: 'Radio Hangi Playback',
       androidNotificationChannelDescription: 'Radio background playback',
       androidNotificationOngoing: true,
-      androidNotificationIcon: 'mipmap/ic_launcher',
+      androidNotificationIcon: 'mipmap/launcher_icon',
     ),
   );
 
