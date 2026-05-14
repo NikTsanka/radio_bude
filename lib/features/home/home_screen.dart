@@ -13,7 +13,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  // ეს ცარიელი screens მერე ჩაანაცვლდება რეალური implementations-ით
   static const List<Widget> _screens = [
     MyRadioScreen(),
     WorldRadioScreen(),
@@ -46,29 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'ფავორიტები',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _PlaceholderScreen({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            Text(subtitle, style: TextStyle(color: Colors.grey[500])),
-          ],
-        ),
       ),
     );
   }
