@@ -70,15 +70,20 @@ class _AlbumArt extends StatelessWidget {
 
             return AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),
-              child: CachedNetworkImage(
-                key: ValueKey(
-                  artUri.toString(),
-                ), // ✓ AnimatedSwitcher-ი ცარიერდება ცვლის
-                imageUrl: artUri.toString(),
-                fit: BoxFit.cover,
-                placeholder: (_, _) => _buildPlaceholder(context),
-                errorWidget: (_, _, _) => _buildPlaceholder(context),
-              ),
+              child: artUri.scheme == 'asset'
+                  ? Image.asset(
+                      artUri.path.replaceFirst('/', ''),
+                      key: ValueKey(artUri.toString()),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _buildPlaceholder(context),
+                    )
+                  : CachedNetworkImage(
+                      key: ValueKey(artUri.toString()),
+                      imageUrl: artUri.toString(),
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => _buildPlaceholder(context),
+                      errorWidget: (_, _, _) => _buildPlaceholder(context),
+                    ),
             );
           },
         ),

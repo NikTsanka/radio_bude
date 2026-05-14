@@ -16,9 +16,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     null,
   );
 
-  /// Default Radio Bude cover (fallback როცა Deezer ვერ ნახა)
-  static const String _defaultCover =
-      'https://niktsanka.github.io/img/cover.png';
+  static const String _defaultCover = Constants.radioBudeArtUrl;
 
   AudioPlayerHandler() {
     _init();

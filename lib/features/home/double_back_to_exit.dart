@@ -15,7 +15,7 @@ class DoubleBackToExit extends StatefulWidget {
     super.key,
     required this.child,
     this.onExit,
-    this.message = 'კიდევ ერთხელ დააჭირე გასვლისთვის',
+    this.message = 'Press again to exit.',
     this.duration = const Duration(seconds: 2),
   });
 
