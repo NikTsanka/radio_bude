@@ -32,11 +32,11 @@ class StationTile extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                color: theme.colorScheme.outline.withValues(alpha: 0.1),
               ),
             ),
             color: isPlaying
-                ? theme.colorScheme.primary.withOpacity(0.1)
+                ? theme.colorScheme.primary.withValues(alpha: 0.1)
                 : null,
           ),
           child: Row(
@@ -64,8 +64,8 @@ class StationTile extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: station.favicon,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => _buildFallbackIcon(theme),
-                errorWidget: (_, __, ___) => _buildFallbackIcon(theme),
+                placeholder: (_, _) => _buildFallbackIcon(theme),
+                errorWidget: (_, _, _) => _buildFallbackIcon(theme),
               )
             : _buildFallbackIcon(theme),
       ),
@@ -77,8 +77,8 @@ class StationTile extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            theme.colorScheme.primary.withOpacity(0.7),
-            theme.colorScheme.tertiary.withOpacity(0.7),
+            theme.colorScheme.primary.withValues(alpha: 0.7),
+            theme.colorScheme.tertiary.withValues(alpha: 0.7),
           ],
         ),
       ),
@@ -108,7 +108,7 @@ class StationTile extends StatelessWidget {
           station.description,
           style: TextStyle(
             fontSize: 12,
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -147,7 +147,7 @@ class StationTile extends StatelessWidget {
               key: ValueKey(isFav),
               color: isFav
                   ? Colors.pink[300]
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         );

@@ -127,7 +127,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
           filled: true,
           fillColor: Theme.of(
             context,
-          ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(24),
             borderSide: BorderSide.none,

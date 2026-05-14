@@ -164,7 +164,7 @@ class _PlayButton extends StatelessWidget {
             color: Theme.of(context).colorScheme.primary,
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
