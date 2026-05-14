@@ -88,7 +88,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
       child: Row(
         children: [
           Text(
-            'აირჩიე ქვეყანა',
+            'Select Country',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -98,7 +98,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
             TextButton.icon(
               onPressed: () => Navigator.pop(context, _ClearSelection()),
               icon: const Icon(Icons.clear, size: 18),
-              label: const Text('გასუფთავება'),
+              label: const Text('Clear'),
             ),
         ],
       ),
@@ -113,7 +113,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
         autofocus: false,
         onChanged: (value) => setState(() => _query = value.trim()),
         decoration: InputDecoration(
-          hintText: 'მოძებნე ქვეყანა...',
+          hintText: 'Search country...',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _query.isNotEmpty
               ? IconButton(
@@ -148,7 +148,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
           children: [
             Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 8),
-            const Text('ქვეყანა ვერ მოიძებნა'),
+            const Text('No country found'),
           ],
         ),
       );
@@ -170,7 +170,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
               color: isSelected ? Theme.of(context).colorScheme.primary : null,
             ),
           ),
-          subtitle: Text('${country.stationCount} სადგური'),
+          subtitle: Text('${country.stationCount} stations'),
           trailing: isSelected
               ? Icon(
                   Icons.check_circle,

@@ -77,8 +77,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     final item = MediaItem(
       id: Constants.radioBudeStreamUrl,
       album: Constants.radioBudeName,
-      title: 'მზადდება...',
-      artist: Constants.radioBudeAuthor,
+      title: 'Loading...',
       artUri: Uri.parse(_defaultCover),
     );
 

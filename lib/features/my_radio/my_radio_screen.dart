@@ -26,11 +26,6 @@ class MyRadioScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'by ${Constants.radioBudeAuthor}',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[400]),
-                ),
 
                 const SizedBox(height: 40),
 
@@ -119,7 +114,7 @@ class _CurrentSongDisplay extends StatelessWidget {
         return Column(
           children: [
             Text(
-              'ახლა ეთერში',
+              'ON AIR',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[500],

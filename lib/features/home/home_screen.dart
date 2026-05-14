@@ -32,17 +32,17 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.radio_outlined),
             selectedIcon: Icon(Icons.radio),
-            label: 'ჩემი რადიო',
+            label: 'My Radio',
           ),
           NavigationDestination(
             icon: Icon(Icons.public_outlined),
             selectedIcon: Icon(Icons.public),
-            label: 'მსოფლიო',
+            label: 'World',
           ),
           NavigationDestination(
             icon: Icon(Icons.favorite_outline),
             selectedIcon: Icon(Icons.favorite),
-            label: 'ფავორიტები',
+            label: 'Favorites',
           ),
         ],
       ),

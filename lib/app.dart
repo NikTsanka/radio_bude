@@ -8,11 +8,11 @@ class RadioBudeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Radio Bude',
+      title: 'Radio Hangi',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark, // ჯერ მუქი, მერე system theme-ს დავხვეწავთ
+      themeMode: ThemeMode.dark,
       home: const HomeScreen(),
     );
   }

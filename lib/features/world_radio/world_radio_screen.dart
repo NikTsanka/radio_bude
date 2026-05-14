@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import '../../core/constants.dart';
 import '../../main.dart';
 import 'radio_browser_service.dart';
 import 'station_model.dart';
@@ -82,7 +83,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _error = 'სადგურების ჩატვირთვა ვერ მოხერხდა';
+        _error = 'Failed to load stations';
       });
       print('🔴 Load error: $e');
     }
@@ -160,7 +161,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ქვეყნების ჩატვირთვა ვერ მოხერხდა')),
+          const SnackBar(content: Text('Failed to load countries')),
         );
         return;
       }
@@ -228,7 +229,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🎙️ Radio Bude'),
+          content: Text('🎙️ Radio Hangi'),
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -260,7 +261,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
         children: [
           Expanded(
             child: Text(
-              'მსოფლიო რადიოები',
+              'World Radio',
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -272,7 +273,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           StreamBuilder<MediaItem?>(
             stream: audioHandler.mediaItem,
             builder: (context, snapshot) {
-              final isPlayingRadioBude = snapshot.data?.album == 'Radio Bude';
+              final isPlayingRadioBude = snapshot.data?.album == Constants.radioBudeName;
 
               if (isPlayingRadioBude) {
                 return Text(
@@ -284,7 +285,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
               return IconButton(
                 onPressed: _backToRadioBude,
                 icon: const Icon(Icons.home),
-                tooltip: 'Radio Bude-ზე დაბრუნება',
+                tooltip: 'Back to Radio Hangi',
                 color: Theme.of(context).colorScheme.primary,
               );
             },
@@ -304,7 +305,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
               controller: _searchController,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
-                hintText: 'მოძებნე სადგური...',
+                hintText: 'Search stations...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -388,7 +389,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
           // "ყველა" / Tag chips
           _buildFilterChip(
-            label: 'ყველა',
+            label: 'All',
             isSelected: _selectedTag == null,
             onTap: () => _onTagSelected(null),
           ),
@@ -406,7 +407,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: ActionChip(
                 avatar: const Icon(Icons.clear, size: 18),
-                label: const Text('გასუფთავება'),
+                label: const Text('Clear'),
                 onPressed: _clearAllFilters,
               ),
             ),
@@ -453,12 +454,12 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
         children: [
           Icon(Icons.cloud_off, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text(_error ?? 'შეცდომა', style: const TextStyle(fontSize: 16)),
+          Text(_error ?? 'Error', style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: _loadInitial,
             icon: const Icon(Icons.refresh),
-            label: const Text('თავიდან ცადე'),
+            label: const Text('Retry'),
           ),
         ],
       ),
@@ -473,14 +474,14 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'სადგური ვერ მოიძებნა',
+            'No stations found',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
           const SizedBox(height: 16),
           TextButton.icon(
             onPressed: _clearAllFilters,
             icon: const Icon(Icons.clear_all),
-            label: const Text('ფილტრების გასუფთავება'),
+            label: const Text('Clear filters'),
           ),
         ],
       ),

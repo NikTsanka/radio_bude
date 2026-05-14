@@ -130,7 +130,7 @@ class StationTile extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    added ? '💖 დაემატა ფავორიტებში' : 'წაიშალა ფავორიტებიდან',
+                    added ? '💖 Added to favorites' : 'Removed from favorites',
                   ),
                   duration: const Duration(seconds: 1),
                   behavior: SnackBarBehavior.floating,

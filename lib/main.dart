@@ -13,9 +13,8 @@ Future<void> main() async {
     builder: () => AudioPlayerHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'ge.canka.radio_bude.channel.audio',
-      androidNotificationChannelName: 'Radio Bude Playback',
-      androidNotificationChannelDescription:
-          'რადიოს უწყვეტი მუშაობა background-ში',
+      androidNotificationChannelName: 'Radio Hangi Playback',
+      androidNotificationChannelDescription: 'Radio background playback',
       androidNotificationOngoing: true,
       androidNotificationIcon: 'mipmap/ic_launcher',
     ),

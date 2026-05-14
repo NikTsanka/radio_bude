@@ -41,7 +41,7 @@ class FavoritesScreen extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              'ფავორიტები',
+              'Favorites',
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -66,7 +66,7 @@ class FavoritesScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.delete_sweep_outlined, size: 20),
                       SizedBox(width: 12),
-                      Text('ყველას წაშლა'),
+                      Text('Clear all'),
                     ],
                   ),
                 ),
@@ -87,14 +87,14 @@ class FavoritesScreen extends StatelessWidget {
             Icon(Icons.favorite_outline, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 24),
             Text(
-              'ფავორიტები ცარიერია',
+              'No favorites yet',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(color: Colors.grey[400]),
             ),
             const SizedBox(height: 8),
             Text(
-              'მიამატე სადგურები "მსოფლიო" tab-დან\nrouter ცარიერდება.',
+              'Add stations from the "World" tab.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
@@ -135,7 +135,7 @@ class FavoritesScreen extends StatelessWidget {
                 FavoritesService().remove(station.stationUuid);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${station.name} წაიშალა'),
+                    content: Text('${station.name} removed'),
                     duration: const Duration(seconds: 2),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -178,14 +178,14 @@ class FavoritesScreen extends StatelessWidget {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('ყველას წაშლა?'),
+          title: const Text('Clear all?'),
           content: const Text(
-            'ყველა ფავორიტი წაიშლება. ეს მოქმედება ვერ უკუგვექცევა.',
+            'All favorites will be removed. This action cannot be undone.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('გაუქმება'),
+              child: const Text('Cancel'),
             ),
             FilledButton.tonal(
               onPressed: () => Navigator.pop(context, true),
@@ -193,7 +193,7 @@ class FavoritesScreen extends StatelessWidget {
                 backgroundColor: Colors.red[700],
                 foregroundColor: Colors.white,
               ),
-              child: const Text('წაშლა'),
+              child: const Text('Delete'),
             ),
           ],
         ),
