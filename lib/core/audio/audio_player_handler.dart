@@ -22,8 +22,6 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       .map((item) => item?.id)
       .distinct();
 
-  static const String _defaultCover = Constants.radioBudeArtUrl;
-
   String? _currentStreamUrl;
   bool _intentionalStop = false;
   Timer? _sleepTimer;
@@ -107,10 +105,10 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> _updateCoverArt(String streamTitle) async {
     final coverUrl = await _coverService.fetchCoverFor(streamTitle);
-    final finalCoverUrl = coverUrl ?? _defaultCover;
+    if (coverUrl == null) return; // keep existing art; don't fall back to asset URI
     final current = mediaItem.value;
     if (current != null && current.title == streamTitle) {
-      mediaItem.add(current.copyWith(artUri: Uri.parse(finalCoverUrl)));
+      mediaItem.add(current.copyWith(artUri: Uri.parse(coverUrl)));
     }
   }
 
@@ -120,7 +118,6 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       id: Constants.radioBudeStreamUrl,
       album: Constants.radioBudeName,
       title: 'Loading...',
-      artUri: Uri.parse(_defaultCover),
     );
     mediaItem.add(item);
     try {

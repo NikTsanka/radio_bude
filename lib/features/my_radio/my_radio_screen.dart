@@ -38,6 +38,8 @@ class _MyRadioScreenState extends State<MyRadioScreen> {
     final artUri = item?.artUri;
     if (artUri == null || artUri == _lastArtUri) return;
     _lastArtUri = artUri;
+    // Skip palette extraction for local assets — only real network art
+    if (artUri.scheme == 'asset') return;
     _extractPalette(artUri);
   }
 
