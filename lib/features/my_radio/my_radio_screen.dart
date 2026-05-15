@@ -3,6 +3,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import '../../core/theme/theme_service.dart';
 import '../../main.dart';
 import 'equalizer_bars.dart';
 
@@ -45,6 +46,29 @@ class MyRadioScreen extends StatelessWidget {
   }
 }
 
+// ─────────────────────────── Theme Toggle ────────────────────────────
+
+class _ThemeToggleButton extends StatelessWidget {
+  const _ThemeToggleButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: ThemeService(),
+      builder:
+          (_, _x) => IconButton(
+            icon: Icon(
+              ThemeService().isDark
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
+            ),
+            tooltip: ThemeService().isDark ? 'Light mode' : 'Dark mode',
+            onPressed: ThemeService().toggle,
+          ),
+    );
+  }
+}
+
 // ─────────────────────────── Top Bar ────────────────────────────
 
 class _TopBar extends StatelessWidget {
@@ -63,6 +87,7 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          const _ThemeToggleButton(),
           const _SleepTimerButton(),
         ],
       ),
