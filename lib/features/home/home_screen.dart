@@ -40,10 +40,21 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _OfflineBanner(),
-            if (_selectedIndex != 0)
-              MiniPlayerBar(
-                onTap: () => setState(() => _selectedIndex = 0),
+            ClipRect(
+              child: AnimatedAlign(
+                alignment: Alignment.topCenter,
+                heightFactor: _selectedIndex != 0 ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeInOut,
+                child: AnimatedOpacity(
+                  opacity: _selectedIndex != 0 ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: MiniPlayerBar(
+                    onTap: () => setState(() => _selectedIndex = 0),
+                  ),
+                ),
               ),
+            ),
             NavigationBar(
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) {

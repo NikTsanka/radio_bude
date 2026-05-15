@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../favorites/favorites_service.dart';
+import '../../my_radio/equalizer_bars.dart';
 import '../station_model.dart';
 
 class StationTile extends StatelessWidget {
@@ -191,11 +192,13 @@ class StationTile extends StatelessWidget {
   Widget _buildTrailing(ThemeData theme) {
     if (isPlaying) {
       return Padding(
-        padding: const EdgeInsets.only(left: 8),
-        child: Icon(
-          Icons.graphic_eq,
+        padding: const EdgeInsets.only(left: 4),
+        child: EqualizerBars(
+          isPlaying: true,
+          height: 20,
+          width: 22,
+          barCount: 3,
           color: theme.colorScheme.primary,
-          size: 24,
         ),
       );
     }

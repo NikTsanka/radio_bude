@@ -51,6 +51,10 @@ dependencies:
   home_widget: ^0.7.0            # Android home screen widget
   connectivity_plus: ^6.0.0      # network state indicator
 
+  # Visuals
+  palette_generator: ^0.3.3     # album art colour extraction
+  shimmer: ^3.0.0               # skeleton loading
+
   # Utilities
   rxdart: ^0.28.0                # streams (audio_service-ი იყენებს)
 
