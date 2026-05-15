@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import '../../core/services/search_history_service.dart';
 import '../../main.dart';
 import 'radio_browser_service.dart';
 import 'recently_played_service.dart';
@@ -21,6 +22,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   final RadioBrowserService _service = RadioBrowserService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   List<Station> _stations = [];
   List<TagInfo> _topTags = [];
@@ -29,6 +31,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMore = true;
+  bool _isSearchFocused = false;
   String? _error;
 
   String _searchQuery = '';
@@ -39,14 +42,15 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   static const int _pageSize = 30;
 
   bool get _hasActiveFilters =>
-      _selectedTag != null ||
-      _selectedCountry != null ||
-      _searchQuery.isNotEmpty;
+      _selectedTag != null || _selectedCountry != null || _searchQuery.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _searchFocusNode.addListener(() {
+      setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
+    });
     _loadInitial();
   }
 
@@ -54,6 +58,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _searchDebounce?.cancel();
     super.dispose();
   }
@@ -200,6 +205,9 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   }
 
   Future<void> _onStationTap(Station station) async {
+    if (_searchQuery.isNotEmpty) {
+      unawaited(SearchHistoryService().add(_searchQuery));
+    }
     _service.registerClick(station.stationUuid);
     RecentlyPlayedService().add(station);
 
@@ -250,6 +258,8 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           children: [
             _buildHeader(),
             _buildSearchBar(),
+            if (_isSearchFocused && _searchQuery.isEmpty)
+              _buildSearchHistoryRow(),
             _buildFilterChips(),
             const Divider(height: 1),
             Expanded(child: _buildBody()),
@@ -308,6 +318,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           Expanded(
             child: TextField(
               controller: _searchController,
+              focusNode: _searchFocusNode,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 hintText: 'Search stations...',
@@ -370,6 +381,50 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     );
   }
 
+  Widget _buildSearchHistoryRow() {
+    return AnimatedBuilder(
+      animation: SearchHistoryService(),
+      builder: (context, _) {
+        final history = SearchHistoryService().history;
+        if (history.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: history.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
+            itemBuilder: (_, i) => InputChip(
+              avatar: const Icon(Icons.history, size: 16),
+              label: Text(history[i]),
+              onPressed: () {
+                _searchController.text = history[i];
+                _onSearchChanged(history[i]);
+                _searchFocusNode.unfocus();
+              },
+              onDeleted: () => SearchHistoryService().remove(history[i]),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _onGeorgiaShortcut() {
+    if (_selectedCountry?.code == 'GE') {
+      setState(() => _selectedCountry = null);
+    } else {
+      setState(
+        () => _selectedCountry = CountryInfo(
+          name: 'Georgia',
+          code: 'GE',
+          stationCount: 0,
+        ),
+      );
+    }
+    _loadInitial();
+  }
+
   Widget _buildFilterChips() {
     return SizedBox(
       height: 48,
@@ -377,7 +432,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          if (_selectedCountry != null)
+          if (_selectedCountry != null && _selectedCountry?.code != 'GE')
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: InputChip(
@@ -392,8 +447,16 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
           _buildFilterChip(
             label: 'All',
-            isSelected: _selectedTag == null,
-            onTap: () => _onTagSelected(null),
+            isSelected: _selectedTag == null && _selectedCountry == null,
+            onTap: () {
+              setState(() => _selectedCountry = null);
+              _onTagSelected(null);
+            },
+          ),
+          _buildFilterChip(
+            label: '🇬🇪 Georgia',
+            isSelected: _selectedCountry?.code == 'GE',
+            onTap: _onGeorgiaShortcut,
           ),
           ..._topTags.map(
             (tag) => _buildFilterChip(
@@ -501,8 +564,11 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
             final recent = RecentlyPlayedService().recent;
             final showRecent = recent.isNotEmpty && !_hasActiveFilters;
 
-            return CustomScrollView(
+            return RefreshIndicator(
+              onRefresh: _loadInitial,
+              child: CustomScrollView(
               controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // Recently played section
                 if (showRecent) ...[
@@ -558,7 +624,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
                   ),
                 ),
               ],
-            );
+            ));
           },
         );
       },

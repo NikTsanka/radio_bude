@@ -46,6 +46,10 @@ dependencies:
   
   # UI helpers
   cached_network_image: ^3.4.1   # სადგურის ლოგოები
+  marquee: ^2.3.0                # scrolling text for long song titles
+  share_plus: ^10.0.0            # share station
+  home_widget: ^0.7.0            # Android home screen widget
+  connectivity_plus: ^6.0.0      # network state indicator
 
   # Utilities
   rxdart: ^0.28.0                # streams (audio_service-ი იყენებს)

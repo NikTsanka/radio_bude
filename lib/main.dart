@@ -2,6 +2,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/audio/audio_player_handler.dart';
+import 'core/services/connectivity_service.dart';
+import 'core/services/search_history_service.dart';
 import 'core/theme/theme_service.dart';
 import 'features/favorites/favorites_service.dart';
 import 'features/world_radio/recently_played_service.dart';
@@ -26,6 +28,8 @@ Future<void> main() async {
     FavoritesService().load(),
     RecentlyPlayedService().load(),
     ThemeService().load(),
+    SearchHistoryService().load(),
+    ConnectivityService().init(),
   ]);
 
   runApp(const RadioBudeApp());

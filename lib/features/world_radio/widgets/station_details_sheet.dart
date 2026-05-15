@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../station_model.dart';
 
 class StationDetailsSheet extends StatelessWidget {
@@ -179,21 +180,37 @@ class StationDetailsSheet extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // Play button
+          // Play + Share buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => Navigator.pop(context, station),
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Play Station'),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(context, station),
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Play Station'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () => _share(station),
+                  child: const Icon(Icons.share),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _share(Station station) {
+    final buf = StringBuffer('🎙️ ${station.name}');
+    if (station.country.isNotEmpty) buf.write('\n📍 ${station.country}');
+    buf.write('\n📻 ${station.url}');
+    buf.write('\n\nShared from Radio Hangi');
+    Share.share(buf.toString());
   }
 
   Widget _fallback(ColorScheme cs) {

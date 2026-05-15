@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:marquee/marquee.dart';
 import '../../core/constants.dart';
 import '../../core/theme/theme_service.dart';
 import '../../main.dart';
@@ -473,6 +474,40 @@ class _EqualizerSection extends StatelessWidget {
 class _SongInfo extends StatelessWidget {
   const _SongInfo();
 
+  static const _songStyle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+  );
+
+  Widget _buildSongTitle(String text) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tp = TextPainter(
+          text: TextSpan(text: text, style: _songStyle),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: constraints.maxWidth);
+
+        if (tp.didExceedMaxLines) {
+          return SizedBox(
+            height: 28,
+            child: Marquee(
+              text: text,
+              style: _songStyle,
+              blankSpace: 48,
+              velocity: 40,
+              startAfter: const Duration(seconds: 2),
+              pauseAfterRound: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return Text(text, style: _songStyle, textAlign: TextAlign.center);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -494,17 +529,7 @@ class _SongInfo extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Text(
-              song ?? 'Connecting to stream...',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                height: 1.3,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+            _buildSongTitle(song ?? 'Connecting to stream...'),
             const SizedBox(height: 6),
             Text(
               Constants.radioBudeName,

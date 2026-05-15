@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../../main.dart';
+import '../world_radio/recently_played_service.dart';
 import '../world_radio/station_model.dart';
 import '../world_radio/widgets/station_tile.dart';
 import 'favorites_service.dart';
@@ -155,6 +156,7 @@ class FavoritesScreen extends StatelessWidget {
   }
 
   Future<void> _playStation(BuildContext context, Station station) async {
+    RecentlyPlayedService().add(station);
     await audioHandler.playStation(
       url: station.url,
       name: station.name,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../my_radio/my_radio_screen.dart';
 import '../world_radio/world_radio_screen.dart';
 import '../favorites/favorites_screen.dart';
+import '../../core/services/connectivity_service.dart';
 import 'double_back_to_exit.dart';
 import 'mini_player_bar.dart';
 import '../../main.dart';
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _OfflineBanner(),
             if (_selectedIndex != 0)
               MiniPlayerBar(
                 onTap: () => setState(() => _selectedIndex = 0),
@@ -61,6 +63,44 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _OfflineBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: ConnectivityService(),
+      builder: (context, _) {
+        return AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: ConnectivityService().isOnline
+              ? const SizedBox.shrink()
+              : Material(
+                  color: Colors.red[700],
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'No internet connection',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        );
+      },
     );
   }
 }

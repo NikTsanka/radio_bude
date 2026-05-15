@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import '../constants.dart';
 import '../services/cover_art_service.dart';
+import '../services/home_widget_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -48,6 +49,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
         }
 
         _updateCoverArt(title);
+        unawaited(_updateHomeWidget());
       }
     });
 
@@ -84,6 +86,15 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
         debugPrint('Reconnect attempt $_reconnectAttempts failed: $e');
       }
     });
+  }
+
+  Future<void> _updateHomeWidget({bool? isPlaying}) async {
+    final item = mediaItem.value;
+    await HomeWidgetService.update(
+      stationName: item?.album ?? Constants.radioBudeName,
+      songTitle: currentSong.value ?? item?.title ?? '',
+      isPlaying: isPlaying ?? _player.playing,
+    );
   }
 
   Future<void> _updateCoverArt(String streamTitle) async {
@@ -136,6 +147,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     try {
       await _player.setUrl(url);
       await _player.play();
+      unawaited(_updateHomeWidget(isPlaying: true));
     } catch (e) {
       debugPrint('Error playing station: $e');
     }
@@ -171,13 +183,17 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> play() {
+  Future<void> play() async {
     _intentionalStop = false;
-    return _player.play();
+    await _player.play();
+    unawaited(_updateHomeWidget(isPlaying: true));
   }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() async {
+    await _player.pause();
+    unawaited(_updateHomeWidget(isPlaying: false));
+  }
 
   @override
   Future<void> stop() async {
