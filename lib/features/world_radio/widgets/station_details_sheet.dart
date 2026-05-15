@@ -57,14 +57,13 @@ class StationDetailsSheet extends StatelessWidget {
                   child: SizedBox(
                     width: 64,
                     height: 64,
-                    child:
-                        station.favicon.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: station.favicon,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, _, _) => _fallback(cs),
-                              )
-                            : _fallback(cs),
+                    child: station.favicon.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: station.favicon,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, _, _) => _fallback(cs),
+                          )
+                        : _fallback(cs),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -161,20 +160,19 @@ class StationDetailsSheet extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: station.tags.take(8).length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
-                itemBuilder:
-                    (_, i) => Chip(
-                      label: Text(
-                        station.tags[i],
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: cs.onSecondaryContainer,
-                        ),
-                      ),
-                      backgroundColor: cs.secondaryContainer,
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (_, i) => Chip(
+                  label: Text(
+                    station.tags[i],
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSecondaryContainer,
                     ),
+                  ),
+                  backgroundColor: cs.secondaryContainer,
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
             ),
           ],
