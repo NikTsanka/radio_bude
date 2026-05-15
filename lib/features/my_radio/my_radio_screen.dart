@@ -602,7 +602,7 @@ class _AlbumArtImage extends StatelessWidget {
       stream: audioHandler.mediaItem,
       builder: (context, snapshot) {
         final artUri = snapshot.data?.artUri;
-        if (artUri == null) return _placeholder(context);
+        if (artUri == null) return _placeholder();
 
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
@@ -613,7 +613,7 @@ class _AlbumArtImage extends StatelessWidget {
                   fit: BoxFit.cover,
                   width: size,
                   height: size,
-                  errorBuilder: (_, _, _) => _placeholder(context),
+                  errorBuilder: (_, _, _) => _placeholder(),
                 )
               : CachedNetworkImage(
                   key: ValueKey(artUri.toString()),
@@ -621,27 +621,20 @@ class _AlbumArtImage extends StatelessWidget {
                   fit: BoxFit.cover,
                   width: size,
                   height: size,
-                  placeholder: (_, _) => _placeholder(context),
-                  errorWidget: (_, _, _) => _placeholder(context),
+                  placeholder: (_, _) => _placeholder(),
+                  errorWidget: (_, _, _) => _placeholder(),
                 ),
         );
       },
     );
   }
 
-  Widget _placeholder(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
+  Widget _placeholder() {
+    return Image.asset(
+      'assets/icon/source.png',
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cs.primary, cs.tertiary],
-        ),
-      ),
-      child: const Icon(Icons.radio, size: 64, color: Colors.white),
+      fit: BoxFit.cover,
     );
   }
 }

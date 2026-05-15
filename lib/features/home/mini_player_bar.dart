@@ -104,19 +104,19 @@ class _Artwork extends StatelessWidget {
 
     Widget image;
     if (artUri == null) {
-      image = _placeholder(context);
+      image = _placeholder();
     } else if (artUri.scheme == 'asset') {
       image = Image.asset(
         artUri.path.replaceFirst('/', ''),
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _placeholder(context),
+        errorBuilder: (_, _, _) => _placeholder(),
       );
     } else {
       image = CachedNetworkImage(
         imageUrl: artUri.toString(),
         fit: BoxFit.cover,
-        placeholder: (_, _) => _placeholder(context),
-        errorWidget: (_, _, _) => _placeholder(context),
+        placeholder: (_, _) => _placeholder(),
+        errorWidget: (_, _, _) => _placeholder(),
       );
     }
 
@@ -152,18 +152,15 @@ class _Artwork extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [cs.primary, cs.tertiary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(8),
+  Widget _placeholder() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.asset(
+        'assets/icon/source.png',
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
       ),
-      child: const Icon(Icons.radio, size: 22, color: Colors.white),
     );
   }
 }
