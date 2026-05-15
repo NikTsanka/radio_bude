@@ -2,7 +2,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/audio/audio_player_handler.dart';
-import 'features/favorites/favorites_service.dart'; // ✓ ახალი import
+import 'features/favorites/favorites_service.dart';
+import 'features/world_radio/recently_played_service.dart';
 
 late AudioPlayerHandler audioHandler;
 
@@ -20,8 +21,10 @@ Future<void> main() async {
     ),
   );
 
-  // ✓ ფავორიტების ჩატვირთვა
-  await FavoritesService().load();
+  await Future.wait([
+    FavoritesService().load(),
+    RecentlyPlayedService().load(),
+  ]);
 
   runApp(const RadioBudeApp());
 }

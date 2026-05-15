@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../main.dart';
 import 'radio_browser_service.dart';
+import 'recently_played_service.dart';
 import 'station_model.dart';
 import 'widgets/country_picker_sheet.dart';
+import 'widgets/station_details_sheet.dart';
 import 'widgets/station_tile.dart';
 
 class WorldRadioScreen extends StatefulWidget {
@@ -35,6 +37,11 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   Timer? _searchDebounce;
 
   static const int _pageSize = 30;
+
+  bool get _hasActiveFilters =>
+      _selectedTag != null ||
+      _selectedCountry != null ||
+      _searchQuery.isNotEmpty;
 
   @override
   void initState() {
@@ -85,12 +92,11 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
         _isLoading = false;
         _error = 'Failed to load stations';
       });
-      print('🔴 Load error: $e');
+      print('Load error: $e');
     }
   }
 
   Future<List<Station>> _fetchStations({required int offset}) async {
-    // თუ რომელიმე ფილტრი/ძებნა აქტიურია — search ვცადოთ
     if (_searchQuery.isNotEmpty ||
         _selectedTag != null ||
         _selectedCountry != null) {
@@ -102,7 +108,6 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
         offset: offset,
       );
     }
-    // სხვა შემთხვევაში — top stations
     return _service.getTopStations(limit: _pageSize, offset: offset);
   }
 
@@ -113,9 +118,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
     try {
       final more = await _fetchStations(offset: _stations.length);
-
       if (!mounted) return;
-
       setState(() {
         _stations.addAll(more);
         _isLoadingMore = false;
@@ -124,7 +127,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingMore = false);
-      print('🔴 Load more error: $e');
+      print('Load more error: $e');
     }
   }
 
@@ -139,9 +142,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 500), () {
       if (!mounted) return;
-      setState(() {
-        _searchQuery = value.trim();
-      });
+      setState(() => _searchQuery = value.trim());
       _loadInitial();
     });
   }
@@ -153,7 +154,6 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
   Future<void> _openCountryPicker() async {
     if (_countries.isEmpty) {
-      // თუ ქვეყნები ჯერ არ ჩაგვიტვირთვია
       try {
         final countries = await _service.getCountries();
         if (!mounted) return;
@@ -178,11 +178,9 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     );
 
     if (!mounted) return;
-
-    if (result == null) return; // user dismissed without selecting
+    if (result == null) return;
 
     if (isClearSelection(result)) {
-      // "გასუფთავება" ღილაკი დაიჭირა
       setState(() => _selectedCountry = null);
     } else {
       setState(() => _selectedCountry = result);
@@ -203,6 +201,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
 
   Future<void> _onStationTap(Station station) async {
     _service.registerClick(station.stationUuid);
+    RecentlyPlayedService().add(station);
 
     await audioHandler.playStation(
       url: station.url,
@@ -222,7 +221,13 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     }
   }
 
-  /// Radio Bude-ზე დაბრუნება
+  Future<void> _onStationLongPress(Station station) async {
+    final result = await StationDetailsSheet.show(context, station);
+    if (result != null && mounted) {
+      _onStationTap(result);
+    }
+  }
+
   Future<void> _backToRadioBude() async {
     await audioHandler.playRadioBude();
 
@@ -262,18 +267,18 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           Expanded(
             child: Text(
               'World Radio',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // Radio Bude-ზე დაბრუნების ღილაკი — მხოლოდ მაშინ ჩანს, როცა სხვა სადგური უკრავს
           StreamBuilder<MediaItem?>(
             stream: audioHandler.mediaItem,
             builder: (context, snapshot) {
-              final isPlayingRadioBude = snapshot.data?.album == Constants.radioBudeName;
+              final isPlayingRadioBude =
+                  snapshot.data?.album == Constants.radioBudeName;
 
               if (isPlayingRadioBude) {
                 return Text(
@@ -307,15 +312,16 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
               decoration: InputDecoration(
                 hintText: 'Search stations...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _onSearchChanged('');
-                        },
-                      )
-                    : null,
+                suffixIcon:
+                    _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _onSearchChanged('');
+                            },
+                          )
+                        : null,
                 filled: true,
                 fillColor: Theme.of(
                   context,
@@ -329,7 +335,6 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          // ქვეყნის ფილტრის ღილაკი
           _buildCountryButton(),
         ],
       ),
@@ -340,11 +345,12 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     final isSelected = _selectedCountry != null;
 
     return Material(
-      color: isSelected
-          ? Theme.of(context).colorScheme.primary
-          : Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      color:
+          isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -354,7 +360,10 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
           height: 48,
           child: Icon(
             Icons.public,
-            color: isSelected ? Theme.of(context).colorScheme.onPrimary : null,
+            color:
+                isSelected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : null,
           ),
         ),
       ),
@@ -362,18 +371,12 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   }
 
   Widget _buildFilterChips() {
-    final hasActiveFilters =
-        _selectedTag != null ||
-        _selectedCountry != null ||
-        _searchQuery.isNotEmpty;
-
     return SizedBox(
       height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          // არჩეული ქვეყანა — ვიზუალური chip
           if (_selectedCountry != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -387,7 +390,6 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
               ),
             ),
 
-          // "ყველა" / Tag chips
           _buildFilterChip(
             label: 'All',
             isSelected: _selectedTag == null,
@@ -401,8 +403,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
             ),
           ),
 
-          // "გასუფთავება" — თუ რამე ფილტრი აქტიურია
-          if (hasActiveFilters)
+          if (_hasActiveFilters)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: ActionChip(
@@ -494,32 +495,88 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
       builder: (context, snapshot) {
         final currentlyPlayingUrl = snapshot.data?.id;
 
-        return ListView.builder(
-          controller: _scrollController,
-          itemCount: _stations.length + (_hasMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= _stations.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+        return AnimatedBuilder(
+          animation: RecentlyPlayedService(),
+          builder: (context, _) {
+            final recent = RecentlyPlayedService().recent;
+            final showRecent = recent.isNotEmpty && !_hasActiveFilters;
+
+            return CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                // Recently played section
+                if (showRecent) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader('Recently Played'),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) {
+                        final station = recent[i];
+                        return StationTile(
+                          station: station,
+                          isPlaying: station.url == currentlyPlayingUrl,
+                          onTap: () => _onStationTap(station),
+                          onLongPress: () => _onStationLongPress(station),
+                        );
+                      },
+                      childCount: recent.length,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader('Top Stations'),
+                  ),
+                ],
+
+                // Main station list
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, index) {
+                      if (index >= _stations.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      final station = _stations[index];
+                      return StationTile(
+                        station: station,
+                        isPlaying: station.url == currentlyPlayingUrl,
+                        onTap: () => _onStationTap(station),
+                        onLongPress: () => _onStationLongPress(station),
+                      );
+                    },
+                    childCount: _stations.length + (_hasMore ? 1 : 0),
                   ),
                 ),
-              );
-            }
-
-            final station = _stations[index];
-            return StationTile(
-              station: station,
-              isPlaying: station.url == currentlyPlayingUrl,
-              onTap: () => _onStationTap(station),
+              ],
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey[500],
+          letterSpacing: 1.5,
+        ),
+      ),
     );
   }
 }

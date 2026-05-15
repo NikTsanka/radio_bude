@@ -6,6 +6,7 @@ import '../station_model.dart';
 class StationTile extends StatelessWidget {
   final Station station;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool isPlaying;
 
   /// თუ true — heart icon ცარიერდება არ ცარიერდება (Favorites tab-ში გვაქვს უკვე heart-ი)
@@ -15,6 +16,7 @@ class StationTile extends StatelessWidget {
     super.key,
     required this.station,
     required this.onTap,
+    this.onLongPress,
     this.isPlaying = false,
     this.hideFavoriteButton = false,
   });
@@ -27,6 +29,7 @@ class StationTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
