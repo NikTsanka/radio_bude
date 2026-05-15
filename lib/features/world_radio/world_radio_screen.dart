@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/services/search_history_service.dart';
@@ -284,11 +283,11 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          StreamBuilder<MediaItem?>(
-            stream: audioHandler.mediaItem,
+          StreamBuilder<String?>(
+            stream: audioHandler.currentlyPlayingUrl,
             builder: (context, snapshot) {
               final isPlayingRadioBude =
-                  snapshot.data?.album == Constants.radioBudeName;
+                  snapshot.data == Constants.radioBudeStreamUrl;
 
               if (isPlayingRadioBude) {
                 return Text(
@@ -382,10 +381,11 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   }
 
   Widget _buildSearchHistoryRow() {
+    final historyService = SearchHistoryService();
     return AnimatedBuilder(
-      animation: SearchHistoryService(),
+      animation: historyService,
       builder: (context, _) {
-        final history = SearchHistoryService().history;
+        final history = historyService.history;
         if (history.isEmpty) return const SizedBox.shrink();
         return SizedBox(
           height: 44,
@@ -402,7 +402,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
                 _onSearchChanged(history[i]);
                 _searchFocusNode.unfocus();
               },
-              onDeleted: () => SearchHistoryService().remove(history[i]),
+              onDeleted: () => historyService.remove(history[i]),
             ),
           ),
         );
@@ -553,15 +553,16 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
   }
 
   Widget _buildStationList() {
-    return StreamBuilder<MediaItem?>(
-      stream: audioHandler.mediaItem,
+    final recentService = RecentlyPlayedService();
+    return StreamBuilder<String?>(
+      stream: audioHandler.currentlyPlayingUrl,
       builder: (context, snapshot) {
-        final currentlyPlayingUrl = snapshot.data?.id;
+        final currentlyPlayingUrl = snapshot.data;
 
         return AnimatedBuilder(
-          animation: RecentlyPlayedService(),
+          animation: recentService,
           builder: (context, _) {
-            final recent = RecentlyPlayedService().recent;
+            final recent = recentService.recent;
             final showRecent = recent.isNotEmpty && !_hasActiveFilters;
 
             return RefreshIndicator(

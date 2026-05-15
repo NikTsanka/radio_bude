@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:just_audio/just_audio.dart';
@@ -16,6 +17,10 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final BehaviorSubject<double> volume = BehaviorSubject<double>.seeded(1.0);
   final BehaviorSubject<DateTime?> sleepTimerEnd =
       BehaviorSubject<DateTime?>.seeded(null);
+
+  late final Stream<String?> currentlyPlayingUrl = mediaItem
+      .map((item) => item?.id)
+      .distinct();
 
   static const String _defaultCover = Constants.radioBudeArtUrl;
 
@@ -73,7 +78,9 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
     _reconnectAttempts++;
     _reconnectTimer?.cancel();
-    final delay = Duration(seconds: 3 * _reconnectAttempts);
+    final backoffSeconds = (3 * (1 << (_reconnectAttempts - 1))).clamp(3, 60);
+    final jitterMs = math.Random().nextInt(1500);
+    final delay = Duration(seconds: backoffSeconds, milliseconds: jitterMs);
     debugPrint('Reconnect attempt $_reconnectAttempts in ${delay.inSeconds}s...');
     _reconnectTimer = Timer(delay, () async {
       if (_intentionalStop || _currentStreamUrl == null) return;
@@ -84,6 +91,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
         debugPrint('Reconnected successfully.');
       } catch (e) {
         debugPrint('Reconnect attempt $_reconnectAttempts failed: $e');
+        _scheduleReconnect();
       }
     });
   }

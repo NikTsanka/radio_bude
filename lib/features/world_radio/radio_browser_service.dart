@@ -4,31 +4,47 @@ import 'package:http/http.dart' as http;
 import '../../core/constants.dart';
 import 'station_model.dart';
 
+class _CacheEntry<T> {
+  final T data;
+  final DateTime _fetchedAt;
+
+  _CacheEntry(this.data) : _fetchedAt = DateTime.now();
+
+  bool isValid(Duration ttl) => DateTime.now().difference(_fetchedAt) < ttl;
+}
+
 /// Radio Browser API client
 ///
 /// Documentation: https://de1.api.radio-browser.info/
 /// 40,000+ რადიო სადგური მსოფლიოს ყველა კუთხიდან
 class RadioBrowserService {
-  /// რომელ mirror-ს ვცადეთ წინა request-ისთვის
-  /// (cache მცირე ეფექტისთვის — fast retry)
   int _lastMirrorIndex = 0;
-
-  /// HTTP client (reusable connections-ისთვის)
   final http.Client _client = http.Client();
 
-  /// Top სადგურები (Click count-ით sorted)
-  ///
-  /// [limit] — რამდენი სადგური დააბრუნოს (default 50)
-  /// [offset] — pagination-ისთვის (skip first N)
+  _CacheEntry<List<Station>>? _topStationsCache;
+  _CacheEntry<List<TagInfo>>? _tagsCache;
+  _CacheEntry<List<CountryInfo>>? _countriesCache;
+
+  static const _topStationsTtl = Duration(minutes: 5);
+  static const _tagsTtl = Duration(minutes: 30);
+  static const _countriesTtl = Duration(minutes: 30);
+
   Future<List<Station>> getTopStations({int limit = 50, int offset = 0}) async {
-    return _request(
+    if (offset == 0 &&
+        _topStationsCache != null &&
+        _topStationsCache!.isValid(_topStationsTtl)) {
+      return _topStationsCache!.data;
+    }
+    final result = await _request(
       '/json/stations/topclick',
       params: {
         'limit': limit.toString(),
         'offset': offset.toString(),
-        'hidebroken': 'true', // გატეხილი სადგურები ფარდამიჩუმოდ გვერდი
+        'hidebroken': 'true',
       },
     );
+    if (offset == 0) _topStationsCache = _CacheEntry(result);
+    return result;
   }
 
   /// ძებნა სახელით / tag-ით / ქვეყნით
@@ -53,16 +69,13 @@ class RadioBrowserService {
 
     if (name != null && name.isNotEmpty) params['name'] = name;
     if (country != null && country.isNotEmpty) params['country'] = country;
-    if (countryCode != null && countryCode.isNotEmpty) {
-      params['countrycode'] = countryCode;
-    }
+    if (countryCode != null && countryCode.isNotEmpty) params['countrycode'] = countryCode;
     if (tag != null && tag.isNotEmpty) params['tag'] = tag;
     if (language != null && language.isNotEmpty) params['language'] = language;
 
     return _request('/json/stations/search', params: params);
   }
 
-  /// კონკრეტული ქვეყნის სადგურები
   Future<List<Station>> getStationsByCountry(
     String countryCode, {
     int limit = 50,
@@ -70,20 +83,24 @@ class RadioBrowserService {
     return searchStations(countryCode: countryCode, limit: limit);
   }
 
-  /// ჟანრის სადგურები
   Future<List<Station>> getStationsByTag(String tag, {int limit = 50}) async {
     return searchStations(tag: tag, limit: limit);
   }
 
-  /// ხელმისაწვდომი ქვეყნების სია (ფილტრის UI-სთვის)
   Future<List<CountryInfo>> getCountries() async {
-    return _requestCountries('/json/countries');
+    if (_countriesCache != null && _countriesCache!.isValid(_countriesTtl)) {
+      return _countriesCache!.data;
+    }
+    final result = await _requestCountries('/json/countries');
+    _countriesCache = _CacheEntry(result);
+    return result;
   }
 
-  /// ხელმისაწვდომი tag-ების სია (ფილტრის UI-სთვის)
-  /// Top 30 ყველაზე პოპულარული tags
   Future<List<TagInfo>> getTopTags({int limit = 30}) async {
-    return _requestTags(
+    if (_tagsCache != null && _tagsCache!.isValid(_tagsTtl)) {
+      return _tagsCache!.data;
+    }
+    final result = await _requestTags(
       '/json/tags',
       params: {
         'order': 'stationcount',
@@ -91,10 +108,28 @@ class RadioBrowserService {
         'limit': limit.toString(),
       },
     );
+    _tagsCache = _CacheEntry(result);
+    return result;
   }
 
-  /// სადგურის "click"-ის count გავუგზავნოთ Radio Browser-ს
-  /// (იყენებენ statistics-ისთვის რომელი სადგურები პოპულარულია)
+  Future<bool> voteForStation(String stationUuid) async {
+    if (stationUuid.isEmpty) return false;
+    try {
+      return await _tryWithFallback((mirror) async {
+        final url = Uri.parse('$mirror/json/vote/$stationUuid');
+        final response = await _client
+            .get(url, headers: _headers)
+            .timeout(const Duration(seconds: 5));
+        if (response.statusCode != 200) return false;
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return json['ok'] == true;
+      });
+    } catch (e) {
+      debugPrint('Vote failed: $e');
+      return false;
+    }
+  }
+
   Future<void> registerClick(String stationUuid) async {
     if (stationUuid.isEmpty) return;
 
@@ -118,7 +153,6 @@ class RadioBrowserService {
     'Content-Type': 'application/json',
   };
 
-  /// Mirror fallback-ით HTTP request
   Future<List<Station>> _request(
     String path, {
     Map<String, String>? params,
@@ -137,7 +171,7 @@ class RadioBrowserService {
       final List<dynamic> jsonList = jsonDecode(response.body);
       return jsonList
           .map((json) => Station.fromJson(json as Map<String, dynamic>))
-          .where((station) => station.isPlayable) // ცარიერი URL-იანი ცარიერდება
+          .where((station) => station.isPlayable)
           .toList();
     });
   }
@@ -179,26 +213,24 @@ class RadioBrowserService {
       final List<dynamic> jsonList = jsonDecode(response.body);
       return jsonList
           .map((json) => TagInfo.fromJson(json as Map<String, dynamic>))
-          .where((t) => t.stationCount > 5) // ცარიერი tag-ები გადანდადებული
+          .where((t) => t.stationCount > 5)
           .toList();
     });
   }
 
-  /// Generic helper — სცადე ყველა mirror თანმიმდევრულად
   Future<T> _tryWithFallback<T>(
     Future<T> Function(String mirror) request,
   ) async {
     final mirrors = Constants.radioBrowserMirrors;
     Object? lastError;
 
-    // ცარიერი mirror-დან ვცადოთ ჯერ
     for (int i = 0; i < mirrors.length; i++) {
       final mirrorIndex = (_lastMirrorIndex + i) % mirrors.length;
       final mirror = mirrors[mirrorIndex];
 
       try {
         final result = await request(mirror);
-        _lastMirrorIndex = mirrorIndex; // ცარიერი mirror-ი ცარიერდება
+        _lastMirrorIndex = mirrorIndex;
         return result;
       } catch (e) {
         debugPrint('Mirror $mirror failed: $e');
@@ -210,7 +242,6 @@ class RadioBrowserService {
     throw Exception('All Radio Browser mirrors failed. Last error: $lastError');
   }
 
-  /// Cleanup (აპლიკაციის გათიშვისას)
   void dispose() {
     _client.close();
   }

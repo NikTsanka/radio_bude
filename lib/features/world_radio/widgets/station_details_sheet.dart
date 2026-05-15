@@ -1,14 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import '../radio_browser_service.dart';
 import '../station_model.dart';
 
-class StationDetailsSheet extends StatelessWidget {
+class StationDetailsSheet extends StatefulWidget {
   final Station station;
 
   const StationDetailsSheet({super.key, required this.station});
 
-  /// Returns the station if "Play" was tapped, otherwise null.
   static Future<Station?> show(BuildContext context, Station station) {
     return showModalBottomSheet<Station>(
       context: context,
@@ -19,9 +20,42 @@ class StationDetailsSheet extends StatelessWidget {
   }
 
   @override
+  State<StationDetailsSheet> createState() => _StationDetailsSheetState();
+}
+
+class _StationDetailsSheetState extends State<StationDetailsSheet> {
+  final _service = RadioBrowserService();
+  late int _votes;
+  bool _voted = false;
+  bool _voting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _votes = widget.station.votes;
+  }
+
+  Future<void> _vote() async {
+    if (_voted || _voting) return;
+    setState(() => _voting = true);
+    HapticFeedback.lightImpact();
+    final ok = await _service.voteForStation(widget.station.stationUuid);
+    if (mounted) {
+      setState(() {
+        _voting = false;
+        if (ok) {
+          _votes++;
+          _voted = true;
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final station = widget.station;
 
     return Container(
       decoration: BoxDecoration(
@@ -35,7 +69,6 @@ class StationDetailsSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12, bottom: 20),
@@ -48,7 +81,6 @@ class StationDetailsSheet extends StatelessWidget {
             ),
           ),
 
-          // Header: favicon + name + country
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -100,7 +132,6 @@ class StationDetailsSheet extends StatelessWidget {
           const Divider(indent: 20, endIndent: 20, height: 1),
           const SizedBox(height: 16),
 
-          // Info badges
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Wrap(
@@ -125,11 +156,59 @@ class StationDetailsSheet extends StatelessWidget {
                     label: _capitalize(station.language),
                     color: cs.tertiary,
                   ),
-                if (station.votes > 0)
-                  _InfoChip(
-                    icon: Icons.thumb_up_outlined,
-                    label: '${station.votes}',
-                    color: cs.onSurface,
+                if (_votes > 0 || true)
+                  GestureDetector(
+                    onTap: _vote,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _voted
+                            ? cs.primary.withValues(alpha: 0.15)
+                            : cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(20),
+                        border: _voted
+                            ? Border.all(
+                                color: cs.primary.withValues(alpha: 0.4),
+                              )
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_voting)
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: cs.primary,
+                              ),
+                            )
+                          else
+                            Icon(
+                              _voted
+                                  ? Icons.thumb_up
+                                  : Icons.thumb_up_outlined,
+                              size: 14,
+                              color: _voted ? cs.primary : cs.onSurface,
+                            ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$_votes',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _voted
+                                  ? cs.primary
+                                  : cs.onSurface.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 if (station.clickCount > 0)
                   _InfoChip(
@@ -141,7 +220,6 @@ class StationDetailsSheet extends StatelessWidget {
             ),
           ),
 
-          // Genre tags
           if (station.tags.isNotEmpty) ...[
             const SizedBox(height: 16),
             Padding(
@@ -180,7 +258,6 @@ class StationDetailsSheet extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // Play + Share buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(

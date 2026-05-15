@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:marquee/marquee.dart';
 import '../../core/constants.dart';
 import '../../core/theme/theme_service.dart';
@@ -52,18 +53,20 @@ class MyRadioScreen extends StatelessWidget {
 class _ThemeToggleButton extends StatelessWidget {
   const _ThemeToggleButton();
 
+  static final _theme = ThemeService();
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: ThemeService(),
+      animation: _theme,
       builder: (context, _) => IconButton(
             icon: Icon(
-              ThemeService().isDark
+              _theme.isDark
                   ? Icons.light_mode_outlined
                   : Icons.dark_mode_outlined,
             ),
-            tooltip: ThemeService().isDark ? 'Light mode' : 'Dark mode',
-            onPressed: ThemeService().toggle,
+            tooltip: _theme.isDark ? 'Light mode' : 'Dark mode',
+            onPressed: _theme.toggle,
           ),
     );
   }
@@ -270,6 +273,11 @@ class _SleepTimerSheet extends StatelessWidget {
           _option(context, '30 minutes', const Duration(minutes: 30)),
           _option(context, '45 minutes', const Duration(minutes: 45)),
           _option(context, '1 hour', const Duration(minutes: 60)),
+          ListTile(
+            leading: const Icon(Icons.edit_outlined),
+            title: const Text('Custom...'),
+            onTap: () => _openCustomPicker(context),
+          ),
           const SizedBox(height: 8),
         ],
       ),
@@ -286,6 +294,44 @@ class _SleepTimerSheet extends StatelessWidget {
       },
     );
   }
+
+  Future<void> _openCustomPicker(BuildContext context) async {
+    final controller = TextEditingController();
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Custom timer'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Minutes',
+            suffixText: 'min',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text.trim());
+              Navigator.pop(ctx, value);
+            },
+            child: const Text('Set'),
+          ),
+        ],
+      ),
+    );
+
+    if (minutes != null && minutes > 0 && context.mounted) {
+      audioHandler.setSleepTimer(Duration(minutes: minutes));
+      Navigator.pop(context);
+    }
+  }
 }
 
 // ─────────────────────────── Album Art ────────────────────────────
@@ -298,8 +344,9 @@ class _AlbumArtSection extends StatefulWidget {
 }
 
 class _AlbumArtSectionState extends State<_AlbumArtSection>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _glowCtrl;
+  late AnimationController _rotationCtrl;
   late Animation<double> _glow;
 
   @override
@@ -313,11 +360,17 @@ class _AlbumArtSectionState extends State<_AlbumArtSection>
       begin: 8,
       end: 36,
     ).animate(CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut));
+
+    _rotationCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    );
   }
 
   @override
   void dispose() {
     _glowCtrl.dispose();
+    _rotationCtrl.dispose();
     super.dispose();
   }
 
@@ -330,11 +383,13 @@ class _AlbumArtSectionState extends State<_AlbumArtSection>
 
         if (playing) {
           if (!_glowCtrl.isAnimating) _glowCtrl.repeat(reverse: true);
+          if (!_rotationCtrl.isAnimating) _rotationCtrl.repeat();
         } else {
           if (_glowCtrl.isAnimating) {
             _glowCtrl.stop();
             _glowCtrl.animateTo(0);
           }
+          if (_rotationCtrl.isAnimating) _rotationCtrl.stop();
         }
 
         return LayoutBuilder(
@@ -348,7 +403,7 @@ class _AlbumArtSectionState extends State<_AlbumArtSection>
                     width: size,
                     height: size,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
+                      shape: BoxShape.circle,
                       boxShadow:
                           playing
                               ? [
@@ -366,7 +421,10 @@ class _AlbumArtSectionState extends State<_AlbumArtSection>
                     child: child,
                   );
                 },
-                child: _AlbumArtImage(size: size),
+                child: RotationTransition(
+                  turns: _rotationCtrl,
+                  child: _AlbumArtImage(size: size),
+                ),
               ),
             );
           },
@@ -383,8 +441,7 @@ class _AlbumArtImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
+    return ClipOval(
       child: StreamBuilder<MediaItem?>(
         stream: audioHandler.mediaItem,
         builder: (context, snapshot) {
@@ -645,6 +702,7 @@ class _PlayButton extends StatelessWidget {
                       iconSize: 48,
                       color: Colors.white,
                       onPressed: () {
+                        HapticFeedback.lightImpact();
                         if (playing) {
                           audioHandler.pause();
                         } else {

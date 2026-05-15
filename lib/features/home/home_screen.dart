@@ -16,12 +16,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  late final List<Widget> _screens;
 
-  static const List<Widget> _screens = [
-    MyRadioScreen(),
-    WorldRadioScreen(),
-    FavoritesScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      const MyRadioScreen(),
+      const WorldRadioScreen(),
+      FavoritesScreen(
+        onNavigateToWorld: () => setState(() => _selectedIndex = 1),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,15 +75,17 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _OfflineBanner extends StatelessWidget {
+  static final _conn = ConnectivityService();
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: ConnectivityService(),
+      animation: _conn,
       builder: (context, _) {
         return AnimatedSize(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          child: ConnectivityService().isOnline
+          child: _conn.isOnline
               ? const SizedBox.shrink()
               : Material(
                   color: Colors.red[700],

@@ -99,13 +99,31 @@ class FavoritesService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// წესრიგის შეცვლა (drag-and-drop reorder-ისთვის)
   Future<void> reorder(int oldIndex, int newIndex) async {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
     final station = _favorites.removeAt(oldIndex);
     _favorites.insert(newIndex, station);
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> sortByName() async {
+    _favorites.sort((a, b) => a.name.compareTo(b.name));
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> sortByRecent(List<String> recentUrls) async {
+    _favorites.sort((a, b) {
+      final ai = recentUrls.indexOf(a.url);
+      final bi = recentUrls.indexOf(b.url);
+      if (ai == -1 && bi == -1) return 0;
+      if (ai == -1) return 1;
+      if (bi == -1) return -1;
+      return ai.compareTo(bi);
+    });
     await _save();
     notifyListeners();
   }

@@ -1,7 +1,9 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../main.dart';
+import '../my_radio/equalizer_bars.dart';
 
 class MiniPlayerBar extends StatelessWidget {
   final VoidCallback onTap;
@@ -78,7 +80,7 @@ class _MiniPlayerContent extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           children: [
-            _Artwork(item: item),
+            _Artwork(item: item, playing: playing),
             const SizedBox(width: 12),
             Expanded(child: _TrackInfo(item: item)),
             const SizedBox(width: 8),
@@ -92,8 +94,9 @@ class _MiniPlayerContent extends StatelessWidget {
 
 class _Artwork extends StatelessWidget {
   final MediaItem item;
+  final bool playing;
 
-  const _Artwork({required this.item});
+  const _Artwork({required this.item, required this.playing});
 
   @override
   Widget build(BuildContext context) {
@@ -117,9 +120,35 @@ class _Artwork extends StatelessWidget {
       );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(width: 44, height: 44, child: image),
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(width: 44, height: 44, child: image),
+          ),
+          if (playing)
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: EqualizerBars(
+                  isPlaying: true,
+                  height: 18,
+                  width: 28,
+                  barCount: 3,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -132,6 +161,7 @@ class _Artwork extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: const Icon(Icons.radio, size: 22, color: Colors.white),
     );
@@ -210,6 +240,7 @@ class _PlayPauseButton extends StatelessWidget {
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
       onPressed: () {
+        HapticFeedback.lightImpact();
         if (playing) {
           audioHandler.pause();
         } else {

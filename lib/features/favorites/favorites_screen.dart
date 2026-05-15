@@ -1,4 +1,3 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../world_radio/recently_played_service.dart';
@@ -7,16 +6,19 @@ import '../world_radio/widgets/station_tile.dart';
 import 'favorites_service.dart';
 
 class FavoritesScreen extends StatelessWidget {
-  const FavoritesScreen({super.key});
+  final VoidCallback? onNavigateToWorld;
+
+  const FavoritesScreen({super.key, this.onNavigateToWorld});
 
   @override
   Widget build(BuildContext context) {
+    final favService = FavoritesService();
     return Scaffold(
       body: SafeArea(
         child: AnimatedBuilder(
-          animation: FavoritesService(),
+          animation: favService,
           builder: (context, _) {
-            final favorites = FavoritesService().favorites;
+            final favorites = favService.favorites;
 
             return Column(
               children: [
@@ -24,7 +26,7 @@ class FavoritesScreen extends StatelessWidget {
                 const Divider(height: 1),
                 Expanded(
                   child: favorites.isEmpty
-                      ? _buildEmptyState(context)
+                      ? _buildEmptyState(context, onNavigateToWorld)
                       : _buildList(context, favorites),
                 ),
               ],
@@ -62,6 +64,27 @@ class FavoritesScreen extends StatelessWidget {
               onSelected: (value) => _handleMenuAction(context, value),
               itemBuilder: (context) => [
                 const PopupMenuItem(
+                  value: 'sort_name',
+                  child: Row(
+                    children: [
+                      Icon(Icons.sort_by_alpha, size: 20),
+                      SizedBox(width: 12),
+                      Text('Sort A → Z'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'sort_recent',
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, size: 20),
+                      SizedBox(width: 12),
+                      Text('Sort by recently played'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
                   value: 'clear',
                   child: Row(
                     children: [
@@ -78,7 +101,7 @@ class FavoritesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, VoidCallback? onNavigate) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -95,10 +118,18 @@ class FavoritesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Add stations from the "World" tab.',
+              'Save stations from the World tab.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
+            if (onNavigate != null) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: onNavigate,
+                icon: const Icon(Icons.public),
+                label: const Text('Browse Stations'),
+              ),
+            ],
           ],
         ),
       ),
@@ -106,10 +137,10 @@ class FavoritesScreen extends StatelessWidget {
   }
 
   Widget _buildList(BuildContext context, List<Station> favorites) {
-    return StreamBuilder<MediaItem?>(
-      stream: audioHandler.mediaItem,
+    return StreamBuilder<String?>(
+      stream: audioHandler.currentlyPlayingUrl,
       builder: (context, snapshot) {
-        final currentlyPlayingUrl = snapshot.data?.id;
+        final currentlyPlayingUrl = snapshot.data;
 
         return ReorderableListView.builder(
           itemCount: favorites.length,
@@ -176,6 +207,17 @@ class FavoritesScreen extends StatelessWidget {
   }
 
   Future<void> _handleMenuAction(BuildContext context, String action) async {
+    if (action == 'sort_name') {
+      await FavoritesService().sortByName();
+      return;
+    }
+
+    if (action == 'sort_recent') {
+      final recentUrls = RecentlyPlayedService().recent.map((s) => s.url).toList();
+      await FavoritesService().sortByRecent(recentUrls);
+      return;
+    }
+
     if (action == 'clear') {
       final confirmed = await showDialog<bool>(
         context: context,

@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../favorites/favorites_service.dart';
 import '../station_model.dart';
 
@@ -28,7 +29,10 @@ class StationTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
         onLongPress: onLongPress,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -107,28 +111,54 @@ class StationTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
-        Text(
-          station.description,
-          style: TextStyle(
-            fontSize: 12,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        Row(
+          children: [
+            if (station.bitrate > 0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${station.bitrate}k',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+            ],
+            Expanded(
+              child: Text(
+                station.description,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildFavoriteButton() {
+    final favService = FavoritesService();
     return AnimatedBuilder(
-      animation: FavoritesService(),
+      animation: favService,
       builder: (context, _) {
-        final isFav = FavoritesService().isFavorite(station.stationUuid);
+        final isFav = favService.isFavorite(station.stationUuid);
 
         return IconButton(
           onPressed: () async {
-            final added = await FavoritesService().toggleFavorite(station);
+            final added = await favService.toggleFavorite(station);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
