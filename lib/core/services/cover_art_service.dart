@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 
 /// Deezer API-დან cover art-ის წამოღების service
@@ -98,7 +99,7 @@ class CoverArtService {
 
       return coverXl ?? coverBig ?? cover;
     } catch (e) {
-      print('CoverArtService error: $e');
+      debugPrint('CoverArtService error: $e');
       return null;
     }
   }

@@ -92,7 +92,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
         _isLoading = false;
         _error = 'Failed to load stations';
       });
-      print('Load error: $e');
+      debugPrint('Load error: $e');
     }
   }
 
@@ -127,7 +127,7 @@ class _WorldRadioScreenState extends State<WorldRadioScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingMore = false);
-      print('Load more error: $e');
+      debugPrint('Load more error: $e');
     }
   }
 

@@ -55,8 +55,7 @@ class _ThemeToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: ThemeService(),
-      builder:
-          (_, _x) => IconButton(
+      builder: (context, _) => IconButton(
             icon: Icon(
               ThemeService().isDark
                   ? Icons.light_mode_outlined

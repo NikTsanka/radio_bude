@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import '../constants.dart';
@@ -21,6 +22,8 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   bool _intentionalStop = false;
   Timer? _sleepTimer;
   Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 5;
 
   AudioPlayerHandler() {
     _init();
@@ -51,7 +54,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     _player.playbackEventStream.listen(
       (_) {},
       onError: (Object e, StackTrace _) {
-        print('Audio error: $e');
+        debugPrint('Audio error: $e');
         if (!_intentionalStop && _currentStreamUrl != null) {
           _scheduleReconnect();
         }
@@ -62,23 +65,23 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   }
 
   void _scheduleReconnect() {
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      debugPrint('Max reconnect attempts reached — giving up.');
+      return;
+    }
+    _reconnectAttempts++;
     _reconnectTimer?.cancel();
-    print('Stream dropped — reconnecting in 3s...');
-    _reconnectTimer = Timer(const Duration(seconds: 3), () async {
+    final delay = Duration(seconds: 3 * _reconnectAttempts);
+    debugPrint('Reconnect attempt $_reconnectAttempts in ${delay.inSeconds}s...');
+    _reconnectTimer = Timer(delay, () async {
       if (_intentionalStop || _currentStreamUrl == null) return;
       try {
         await _player.setUrl(_currentStreamUrl!);
         await _player.play();
-        print('Reconnected successfully.');
+        _reconnectAttempts = 0;
+        debugPrint('Reconnected successfully.');
       } catch (e) {
-        print('Reconnect failed: $e — retrying in 10s');
-        _reconnectTimer = Timer(const Duration(seconds: 10), () async {
-          if (_intentionalStop || _currentStreamUrl == null) return;
-          try {
-            await _player.setUrl(_currentStreamUrl!);
-            await _player.play();
-          } catch (_) {}
-        });
+        debugPrint('Reconnect attempt $_reconnectAttempts failed: $e');
       }
     });
   }
@@ -104,7 +107,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     try {
       await _player.setUrl(Constants.radioBudeStreamUrl);
     } catch (e) {
-      print('Error loading Radio Bude: $e');
+      debugPrint('Error loading Radio Bude: $e');
     }
   }
 
@@ -116,6 +119,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   }) async {
     _intentionalStop = false;
     _reconnectTimer?.cancel();
+    _reconnectAttempts = 0;
     _currentStreamUrl = url;
 
     final item = MediaItem(
@@ -133,13 +137,14 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       await _player.setUrl(url);
       await _player.play();
     } catch (e) {
-      print('Error playing station: $e');
+      debugPrint('Error playing station: $e');
     }
   }
 
   Future<void> playRadioBude() async {
     _intentionalStop = false;
     _reconnectTimer?.cancel();
+    _reconnectAttempts = 0;
     await _loadRadioBude();
     await _player.play();
   }

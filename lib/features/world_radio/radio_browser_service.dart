@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import '../../core/constants.dart';
 import 'station_model.dart';
@@ -200,7 +201,7 @@ class RadioBrowserService {
         _lastMirrorIndex = mirrorIndex; // ცარიერი mirror-ი ცარიერდება
         return result;
       } catch (e) {
-        print('Mirror $mirror failed: $e');
+        debugPrint('Mirror $mirror failed: $e');
         lastError = e;
         continue;
       }

@@ -10,8 +10,7 @@ class RadioBudeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: ThemeService(),
-      builder:
-          (_, _x) => MaterialApp(
+      builder: (context, _) => MaterialApp(
             title: 'Radio Hangi',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,

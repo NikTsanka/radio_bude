@@ -41,10 +41,10 @@ class FavoritesService extends ChangeNotifier {
       }
 
       _isLoaded = true;
-      print('💖 Loaded ${_favorites.length} favorites');
+      debugPrint('Loaded ${_favorites.length} favorites');
       notifyListeners();
     } catch (e) {
-      print('🔴 Favorites load error: $e');
+      debugPrint('Favorites load error: $e');
       _favorites = [];
       _isLoaded = true;
       notifyListeners();
@@ -58,7 +58,7 @@ class FavoritesService extends ChangeNotifier {
       final jsonList = _favorites.map((s) => s.toJson()).toList();
       await prefs.setString(_storageKey, jsonEncode(jsonList));
     } catch (e) {
-      print('🔴 Favorites save error: $e');
+      debugPrint('Favorites save error: $e');
     }
   }
 

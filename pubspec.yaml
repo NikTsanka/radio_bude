@@ -1,5 +1,5 @@
 name: radio_bude
-description: "A new Flutter project."
+description: "Radio Hangi — Georgian internet radio player"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -38,9 +38,6 @@ dependencies:
   audio_service: ^0.18.18
   audio_session: ^0.2.2
   
-  # State management
-  flutter_riverpod: ^2.6.1
-  
   # HTTP & API
   http: ^1.5.0
   
@@ -49,11 +46,9 @@ dependencies:
   
   # UI helpers
   cached_network_image: ^3.4.1   # სადგურის ლოგოები
-  marquee: ^2.3.0                # გრძელი ტექსტი scrolling-ად
-  
+
   # Utilities
   rxdart: ^0.28.0                # streams (audio_service-ი იყენებს)
-  flutter_svg: ^2.0.17           # SVG icons
 
 dev_dependencies:
   flutter_test:
