@@ -96,10 +96,13 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> _updateHomeWidget({bool? isPlaying}) async {
     final item = mediaItem.value;
+    final artStr = item?.artUri?.toString();
+    final coverArtUrl = (artStr != null && artStr.startsWith('http')) ? artStr : null;
     await HomeWidgetService.update(
       stationName: item?.album ?? Constants.radioBudeName,
       songTitle: currentSong.value ?? item?.title ?? '',
       isPlaying: isPlaying ?? _player.playing,
+      coverArtUrl: coverArtUrl,
     );
   }
 
@@ -109,6 +112,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     final current = mediaItem.value;
     if (current != null && current.title == streamTitle) {
       mediaItem.add(current.copyWith(artUri: Uri.parse(coverUrl)));
+      unawaited(_updateHomeWidget()); // push new cover art to widget
     }
   }
 

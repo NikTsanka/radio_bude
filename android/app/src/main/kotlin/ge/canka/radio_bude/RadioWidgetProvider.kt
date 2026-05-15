@@ -6,8 +6,13 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.view.KeyEvent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.widget.RemoteViews
+import es.antonborri.home_widget.HomeWidgetBackgroundIntent
+import java.net.HttpURLConnection
+import java.net.URL
 
 class RadioWidgetProvider : AppWidgetProvider() {
 
@@ -23,7 +28,6 @@ class RadioWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        // Restore widget data after device reboot or app update
         if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
             intent.action == Intent.ACTION_MY_PACKAGE_REPLACED
         ) {
@@ -44,38 +48,54 @@ class RadioWidgetProvider : AppWidgetProvider() {
         val stationName = prefs.getString("station_name", "Radio Hangi") ?: "Radio Hangi"
         val songTitle   = prefs.getString("song_title", "Tap to open") ?: "Tap to open"
         val isPlaying   = prefs.getBoolean("is_playing", false)
+        val coverArtUrl = prefs.getString("cover_art_url", null)
 
-        val views = RemoteViews(context.packageName, R.layout.radio_widget)
-        views.setTextViewText(R.id.widget_station_name, stationName)
-        views.setTextViewText(R.id.widget_song_title, songTitle)
-        views.setImageViewResource(
-            R.id.widget_play_pause_icon,
-            if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
-        )
-
-        // Tapping the widget body opens the app
-        val openAppIntent = PendingIntent.getActivity(
+        val openIntent = PendingIntent.getActivity(
             context, 0,
             context.packageManager.getLaunchIntentForPackage(context.packageName),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        views.setOnClickPendingIntent(R.id.widget_root, openAppIntent)
-
-        // Tapping the play/pause button sends a media key event to audio_service
-        val keyEvent = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
-        val mediaIntent = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
-            component = ComponentName(
-                context,
-                com.ryanheise.audioservice.MediaButtonReceiver::class.java,
-            )
-            putExtra(Intent.EXTRA_KEY_EVENT, keyEvent)
-        }
-        val playPauseIntent = PendingIntent.getBroadcast(
-            context, 1, mediaIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        val playIntent = HomeWidgetBackgroundIntent.getBroadcast(
+            context,
+            Uri.parse("radiobude://play_pause"),
         )
-        views.setOnClickPendingIntent(R.id.widget_play_btn, playPauseIntent)
 
-        appWidgetManager.updateAppWidget(appWidgetId, views)
+        fun buildViews(art: Bitmap?): RemoteViews {
+            val v = RemoteViews(context.packageName, R.layout.radio_widget)
+            v.setTextViewText(R.id.widget_station_name, stationName)
+            v.setTextViewText(R.id.widget_song_title, songTitle)
+            v.setImageViewResource(
+                R.id.widget_play_pause_icon,
+                if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
+            )
+            if (art != null) {
+                v.setImageViewBitmap(R.id.widget_art, art)
+            } else {
+                v.setImageViewResource(R.id.widget_art, R.mipmap.launcher_icon)
+            }
+            v.setOnClickPendingIntent(R.id.widget_root, openIntent)
+            v.setOnClickPendingIntent(R.id.widget_play_btn, playIntent)
+            return v
+        }
+
+        // Render immediately with launcher icon, then update art in background
+        appWidgetManager.updateAppWidget(appWidgetId, buildViews(null))
+
+        if (coverArtUrl != null) {
+            Thread {
+                val bitmap = downloadBitmap(coverArtUrl)
+                appWidgetManager.updateAppWidget(appWidgetId, buildViews(bitmap))
+            }.start()
+        }
+    }
+
+    private fun downloadBitmap(url: String): Bitmap? = try {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 5_000
+        conn.readTimeout = 5_000
+        conn.connect()
+        BitmapFactory.decodeStream(conn.inputStream)
+    } catch (_: Exception) {
+        null
     }
 }

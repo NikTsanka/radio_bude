@@ -8,11 +8,13 @@
     android:background="@drawable/widget_background"
     android:gravity="center_vertical">
 
-    <!-- App icon -->
+    <!-- Cover art (falls back to launcher icon) -->
     <ImageView
+        android:id="@+id/widget_art"
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:src="@mipmap/launcher_icon"
+        android:scaleType="centerCrop"
         android:contentDescription="Radio Hangi" />
 
     <!-- Station name + song title -->
